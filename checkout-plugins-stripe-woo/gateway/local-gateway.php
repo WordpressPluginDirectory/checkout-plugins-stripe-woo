@@ -70,6 +70,10 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 	 * @return boolean
 	 */
 	public function is_available() {
+		if ( 'payment' === Helper::get_setting( 'cpsw_element_type' ) ) {
+			return false;
+		}
+
 		if ( 'yes' !== $this->enabled ) {
 			return false;
 		}
@@ -97,6 +101,11 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 	 * @return string
 	 */
 	protected function get_payment_description( $desc ) {
+		// Early return if the element type is a payment element since it doesn't support country-based settings.
+		if ( 'payment' === Helper::get_setting( 'cpsw_element_type' ) ) {
+			return $desc;
+		}
+
 		if ( 'all_except' === $this->get_option( 'allowed_countries' ) ) {
 			// translators: %s: except countries.
 			$desc .= sprintf( __( ' & billing country is not <strong>%s</strong>', 'checkout-plugins-stripe-woo' ), implode( ', ', $this->get_option( 'except_countries', array() ) ) );
@@ -457,6 +466,8 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 					}
 
 					wc_add_notice( $error . $intent_data['message'], 'error' );
+					/* translators: %1$1s stripe error message.  */
+					Logger::info( sprintf( __( 'Stripe error:  %1$1s', 'checkout-plugins-stripe-woo' ), $error . $intent_data['message'] ) );
 
 					return [
 						'result'      => 'fail',
@@ -582,6 +593,8 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 
 			// translators: %s: payment fail message.
 			wc_add_notice( sprintf( __( 'Payment failed. %s', 'checkout-plugins-stripe-woo' ), Helper::get_localized_messages( $code, $message ) ), 'error' );
+			/* translators: %1$1s order id, %2$2s payment fail message.  */
+			Logger::error( sprintf( __( 'Payment failed for Order id - %1$1s. %2$2s', 'checkout-plugins-stripe-woo' ), $order_id, Helper::get_localized_messages( $code, $message ) ) );
 			$redirect_url = wc_get_checkout_url();
 		}
 		wp_safe_redirect( $redirect_url );
