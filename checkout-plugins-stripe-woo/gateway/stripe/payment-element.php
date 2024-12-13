@@ -245,8 +245,7 @@ class Payment_Element extends Abstract_Payment_Gateway {
 	 * @return boolean
 	 */
 	public function is_current_section() {
-		$notice = Notice::get_instance();
-		return $notice->is_cpsw_section( $this->id );
+		return Notice::is_cpsw_section( $this->id );
 	}
 
 	/**
@@ -260,8 +259,6 @@ class Payment_Element extends Abstract_Payment_Gateway {
 		if ( 'yes' !== $this->enabled ) {
 			return;
 		}
-
-		$notice = Notice::get_instance();
 
 		if ( ! $this->is_current_section() ) {
 			return;
@@ -421,7 +418,7 @@ class Payment_Element extends Abstract_Payment_Gateway {
 			}
 
 			if ( ! empty( trim( $this->statement_descriptor ) ) ) {
-				$data['statement_descriptor'] = $this->statement_descriptor;
+				$data['statement_descriptor_suffix'] = $this->statement_descriptor;
 			}
 
 			/* translators: %1$1s order id, %2$2s order total amount. */
@@ -526,17 +523,9 @@ class Payment_Element extends Abstract_Payment_Gateway {
 	public function verify_intent() {
 		$checkout_url = wc_get_checkout_url();
 
-		// Nonce verification.
-		if ( ! isset( $_GET['confirm_payment_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( $_GET['confirm_payment_nonce'] ), 'cpsw_confirm_payment_intent' ) ) {
-			wc_add_notice( __( 'Order is not complete! Payment not confirmed. Please try again.', 'checkout-plugins-stripe-woo' ), 'error' );
-			Logger::error( __( 'Invalid order! the nonce security check didn’t pass.', 'checkout-plugins-stripe-woo' ) );
-			wp_safe_redirect( $checkout_url );
-			exit();
-		}
-
 		$order_id = isset( $_GET['order'] ) ? sanitize_text_field( $_GET['order'] ) : 0; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$redirect = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : ''; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		
+
 		// Check for empty order id.
 		if ( empty( $order_id ) ) {
 			wc_add_notice( __( 'No orders are found for provided order ID.', 'checkout-plugins-stripe-woo' ), 'error' );
@@ -555,7 +544,7 @@ class Payment_Element extends Abstract_Payment_Gateway {
 			exit();
 		}
 
-		if ( ! isset( $_GET['order_key'] ) || ! $order->key_is_valid( wc_clean( $_GET['order_key'] ) ) ) {
+		if ( ! isset( $_GET['order_key'] ) || ! $order->key_is_valid( wc_clean( $_GET['order_key'] ) ) ) { //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			wc_add_notice( __( 'Invalid order key received.', 'checkout-plugins-stripe-woo' ), 'error' );
 			Logger::error( __( 'Invalid order key.', 'checkout-plugins-stripe-woo' ) );
 			wp_safe_redirect( $checkout_url );

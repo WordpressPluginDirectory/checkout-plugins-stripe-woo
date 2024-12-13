@@ -2,13 +2,13 @@
 Contributors: brainstormforce
 Tags: stripe, credit card, apple pay, google pay, express checkout
 Requires at least: 5.4
-Tested up to: 6.6
-Stable tag: 1.9.2
+Tested up to: 6.7
+Stable tag: 1.10.1
 Requires PHP: 5.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Use Stripe Payments For WooCommerce for easy, secure transactions, including credit cards, Apple Pay, and Google Pay. Boost sales with this free plugin!
+Use Stripe Payments for WooCommerce for secure credit card, Apple Pay, and Google Pay transactions. Boost sales with this free, easy-to-use plugin!
 
 == Description ==
 
@@ -115,6 +115,20 @@ We understand the need for a quality product backed by dedicated support that ca
 4. Express Checkout Button on Checkout Page
 
 == Changelog ==
+
+= 1.10.1 - Friday, 13th December 2024 =
+* Fix: The deprecated statement_descriptor has been removed as it was only kept for backward compatibility.
+* Fix: Resolved an incorrect usage error for the _load_textdomain_just_in_time function.
+
+= 1.10.0 - TUESDAY, 27th August 2024 =
+* New: Enabled Klarna payment method support for several more countries.
+* Improvement: Improved the country based conditions for Klarna for better availability on checkout page.
+* Improvement: Improved the overall design and functionality of plugin's onboarding process.
+* Improvement: Improved the overall notices structures for future compatibility of plugin.
+
+= 1.9.3 - MONDAY, 19th August 2024 =
+* Fix: Fixed an issue where the orders status was getting set as pending when the guest checkout option is disabled.
+* Fix: Resolved conflicts of payment's setting menu between WooPayments plugin.
 
 = 1.9.2 - MONDAY, 5th August 2024 =
 * Improvement: Added a notice about the upcoming deprecation of Giropay. [Read more](https://support.stripe.com/questions/availability-of-giropay-june-2024-update)

@@ -79,13 +79,10 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 		}
 
 		// Perform a conditional check based on allowed countries in admin settings.
-		// This check is applicable only for the classic checkout. For checkout blocks, it's handled in JavaScript.
-		if ( ! Helper::is_block_checkout() ) {
-			if ( ! empty( $this->get_option( 'allowed_countries' ) ) && 'all_except' === $this->get_option( 'allowed_countries' ) ) {
-				return ! in_array( $this->get_billing_country(), $this->get_option( 'except_countries', array() ), true );
-			} elseif ( ! empty( $this->get_option( 'allowed_countries' ) ) && 'specific' === $this->get_option( 'allowed_countries' ) ) {
-				return in_array( $this->get_billing_country(), $this->get_option( 'specific_countries', array() ), true );
-			}
+		if ( ! empty( $this->get_option( 'allowed_countries' ) ) && 'all_except' === $this->get_option( 'allowed_countries' ) ) {
+			return ! in_array( $this->get_billing_country(), $this->get_option( 'except_countries', array() ), true );
+		} elseif ( ! empty( $this->get_option( 'allowed_countries' ) ) && 'specific' === $this->get_option( 'allowed_countries' ) ) {
+			return in_array( $this->get_billing_country(), $this->get_option( 'specific_countries', array() ), true );
 		}
 
 		return parent::is_available();
@@ -117,8 +114,8 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 				// translators: %s: billing countries are not selected.
 				$description = sprintf( __( ' & %1$s billing country is not selected %2$s', 'checkout-plugins-stripe-woo' ), '<strong style="color:#ff0000;">', '</strong>' );
 			}
-			
-			
+
+
 			$desc .= $description;
 		}
 
@@ -316,8 +313,7 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 	 * @return boolean
 	 */
 	public function is_current_section() {
-		$notice = Notice::get_instance();
-		return $notice->is_cpsw_section( $this->id );
+		return Notice::is_cpsw_section( $this->id );
 	}
 
 	/**
@@ -332,8 +328,6 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 			return;
 		}
 
-		$notice = Notice::get_instance();
-
 		if ( ! $this->is_current_section() ) {
 			return;
 		}
@@ -347,7 +341,7 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 			$method = ( 'cpsw_ideal' === $this->id ) ? 'iDEAL' : ucfirst( str_replace( 'cpsw_', '', $this->id ) );
 
 			/* translators: %1$s Payment method, %2$s List of supported currencies */
-			$notice->add( $this->id . '_currency', 'notice notice-error', sprintf( __( '%1$s is enabled - it requires store currency to be set to %2$s.', 'checkout-plugins-stripe-woo' ), $method, implode( ', ', $this->get_supported_currency() ) ), true );
+			Notice::add( $this->id . '_currency', 'notice notice-error', sprintf( __( '%1$s is enabled - it requires store currency to be set to %2$s.', 'checkout-plugins-stripe-woo' ), $method, implode( ', ', $this->get_supported_currency() ) ), true );
 		}
 
 		// Add notice if currency not supported.
@@ -358,7 +352,7 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 			'no' !== get_option( 'cpsw_show_' . $this->id . '_stripe_currency_notice' )
 		) {
 			/* translators: %1$s Payment method, %2$s List of supported currencies */
-			$notice->add( $this->id . '_stripe_currency', 'notice notice-error', sprintf( __( '%1$s is enabled - your store currency %2$s does not match with your stripe account supported currency %3$s.', 'checkout-plugins-stripe-woo' ), ucfirst( str_replace( 'cpsw_', '', $this->id ) ), get_woocommerce_currency(), strtoupper( implode( ', ', $default_currency ) ) ), true );
+			Notice::add( $this->id . '_stripe_currency', 'notice notice-error', sprintf( __( '%1$s is enabled - your store currency %2$s does not match with your stripe account supported currency %3$s.', 'checkout-plugins-stripe-woo' ), ucfirst( str_replace( 'cpsw_', '', $this->id ) ), get_woocommerce_currency(), strtoupper( implode( ', ', $default_currency ) ) ), true );
 		}
 
 		/**
@@ -369,7 +363,7 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 		 * @param obj $notice Notice object.
 		 * @param obj $this Current full class object.
 		 */
-		do_action( 'cpsw_add_notices_for_local_gateways', $notice, $this );
+		do_action( 'cpsw_add_notices_for_local_gateways', Notice::get_instance(), $this );
 	}
 
 	/**
@@ -568,14 +562,6 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 	public function verify_intent() {
 		$checkout_url = wc_get_checkout_url();
 
-		// Nonce verification.
-		if ( ! isset( $_GET['confirm_payment_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( $_GET['confirm_payment_nonce'] ), 'cpsw_confirm_payment_intent' ) ) {
-			wc_add_notice( __( 'Order is not complete! Payment not confirmed. Please try again.', 'checkout-plugins-stripe-woo' ), 'error' );
-			Logger::error( __( 'Invalid order! the nonce security check didn’t pass.', 'checkout-plugins-stripe-woo' ) );
-			wp_safe_redirect( $checkout_url );
-			exit();
-		}
-
 		$order_id = isset( $_GET['order'] ) ? sanitize_text_field( $_GET['order'] ) : 0; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 		// Check for empty order id.
@@ -596,13 +582,13 @@ class Local_Gateway extends Abstract_Payment_Gateway {
 			exit();
 		}
 
-		if ( ! isset( $_GET['order_key'] ) || ! $order->key_is_valid( wc_clean( $_GET['order_key'] ) ) ) {
+		if ( ! isset( $_GET['order_key'] ) || ! $order->key_is_valid( wc_clean( $_GET['order_key'] ) ) ) { //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			wc_add_notice( __( 'Invalid order key received.', 'checkout-plugins-stripe-woo' ), 'error' );
 			Logger::error( __( 'Invalid order key.', 'checkout-plugins-stripe-woo' ) );
 			wp_safe_redirect( $checkout_url );
 			exit();
 		}
-		
+
 		$intent_secret = $order->get_meta( '_cpsw_intent_secret' );
 		$stripe_api    = new Stripe_Api();
 		$response      = $stripe_api->payment_intents( 'retrieve', [ $intent_secret['id'] ] );
